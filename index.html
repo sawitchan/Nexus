@@ -36,7 +36,7 @@
             </div>
             <div>
                 <h1 class="text-xl font-[800] italic tracking-tighter leading-none">NEXUS<span class="text-purple-500">V7</span></h1>
-                <p id="system-status" class="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">Status: Connecting...</p>
+                <p id="system-status" class="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">Status: Loading...</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -124,11 +124,16 @@
     </div>
 
     <script>
-        // ================== KONFIGURASI SUPABASE LU ==================
+        // ================== KONFIGURASI ==================
         const SUPABASE_URL = 'https://iddixsqqpjbyswsadjwv.supabase.co'; 
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkZGl4c3FxcGpieXN3c2Fkand2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTUwNTYsImV4cCI6MjA4ODczMTA1Nn0.rXWDEi26WWE1VJQ2dwjpBXhK4YqRCgVC-HfxLkcdDbA';
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch(e) {
+            console.error("Supabase Init Error", e);
+        }
 
         const APIS = { pin: '144927' };
         
@@ -179,21 +184,26 @@
 
         // ================== INIT SUPABASE ==================
         async function initSupabase() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                state.user = session.user;
-                document.getElementById('system-status').innerText = 'Status: Cloud Ready';
-                document.getElementById('system-status').style.color = '#22c55e';
-                fetchHistory();
-            } else {
-                const { data, error } = await supabase.auth.signInAnonymously();
-                if (!error) {
-                    state.user = data.user;
-                    document.getElementById('system-status').innerText = 'Status: Synced';
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    state.user = session.user;
+                    document.getElementById('system-status').innerText = 'Status: Cloud Ready';
                     document.getElementById('system-status').style.color = '#22c55e';
+                    fetchHistory();
                 } else {
-                    document.getElementById('system-status').innerText = 'Status: Error';
+                    const { data, error } = await supabase.auth.signInAnonymously();
+                    if (!error && data) {
+                        state.user = data.user;
+                        document.getElementById('system-status').innerText = 'Status: Synced';
+                        document.getElementById('system-status').style.color = '#22c55e';
+                    } else {
+                        throw error;
+                    }
                 }
+            } catch(e) {
+                console.error("Connection Error", e);
+                document.getElementById('system-status').innerText = 'Status: Offline';
             }
         }
 
@@ -203,14 +213,18 @@
             const tempLog = { id: 'temp-' + Date.now(), tool_name: name, action_type: type, detail: detail, created_at: new Date().toISOString() };
             state.history.unshift(tempLog);
             renderHistory();
-            await supabase.from('nexus_history').insert({ user_id: state.user.id, tool_name: name, action_type: type, detail: detail });
-            fetchHistory();
+            try {
+                await supabase.from('nexus_history').insert({ user_id: state.user.id, tool_name: name, action_type: type, detail: detail });
+                fetchHistory();
+            } catch(e) { console.error(e); }
         }
 
         async function fetchHistory() {
             if (!state.user) return;
-            const { data } = await supabase.from('nexus_history').select('*').eq('user_id', state.user.id).order('created_at', { ascending: false }).limit(50);
-            if (data) { state.history = data; renderHistory(); }
+            try {
+                const { data } = await supabase.from('nexus_history').select('*').eq('user_id', state.user.id).order('created_at', { ascending: false }).limit(50);
+                if (data) { state.history = data; renderHistory(); }
+            } catch(e) { console.error(e); }
         }
 
         // ================== RENDER UI ==================
@@ -228,7 +242,8 @@
         }
         
         function renderSettingsHub() {
-            document.getElementById('settings-grid').innerHTML = USER_TOOLS.map(t => `
+            const grid = document.getElementById('settings-grid');
+            grid.innerHTML = USER_TOOLS.map(t => `
                  <div class="premium-glass p-5 rounded-[2rem] flex flex-col items-center text-center cursor-pointer" onclick="openTool('${t.id}', 'user')">
                     <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style="background: ${t.color}15; color: ${t.color}"><i data-lucide="${t.icon}" size="24"></i></div>
                     <h3 class="text-[10px] font-black uppercase italic">${t.title}</h3>
@@ -321,43 +336,100 @@
         }
 
         // ================== HELPER FUNCTIONS ==================
-    async function processMedia(title) {
-    const url = document.getElementById('media-url').value;
-    if(!url) return alert("Masukkan URL");
+        
+        // MEDIA
+        async function processMedia(title) {
+            const url = document.getElementById('media-url').value;
+            if(!url) return alert("Masukkan URL");
+            const resDiv = document.getElementById('media-result');
+            resDiv.innerHTML = `<p class="text-purple-400 animate-pulse">Menghubungi Server...</p>`;
+            resDiv.classList.remove('hidden');
 
-    const resDiv = document.getElementById('media-result');
-    resDiv.innerHTML = `<p class="text-purple-400 animate-pulse">Menghubungi Server...</p>`;
-    resDiv.classList.remove('hidden');
+            try {
+                const { data, error } = await supabase.functions.invoke('quick-action', { body: { url: url } });
+                if (error) throw error;
 
-    try {
-        const { data, error } = await supabase.functions.invoke('tiktok-dl', {
-            body: { url: url }
-        });
+                const videoUrl = data.data?.play || data.play || null;
+                const musicUrl = data.data?.music || data.music || null;
 
-        if (error) throw error;
-
-        const videoUrl = data.data?.play || data.play || null;
-        const musicUrl = data.data?.music || data.music || null;
-
-        if(videoUrl) {
-            resDiv.innerHTML = `
-                <p class="text-green-400 font-bold mb-4">Berhasil!</p>
-                <video controls class="w-full rounded-xl mb-4" src="${videoUrl}"></video>
-                <div class="grid grid-cols-2 gap-2">
-                    <a href="${videoUrl}" target="_blank" class="bg-green-500 text-black text-center py-2 rounded-xl text-xs font-bold">Download Video</a>
-                    <a href="${musicUrl}" target="_blank" class="bg-purple-500 text-white text-center py-2 rounded-xl text-xs font-bold">Download MP3</a>
-                  </div>
-               `;
-               saveLog(title, 'Success', url.substring(0,20));
-             } else {
-                resDiv.innerHTML = `<p class="text-red-400">Format data tidak dikenali. Cek Console.</p>`;
-                console.log(data);
-          }
-
+                if(videoUrl) {
+                    resDiv.innerHTML = `
+                        <p class="text-green-400 font-bold mb-4">Berhasil!</p>
+                        <video controls class="w-full rounded-xl mb-4" src="${videoUrl}"></video>
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="${videoUrl}" target="_blank" class="bg-green-500 text-black text-center py-2 rounded-xl text-xs font-bold">Download Video</a>
+                            <a href="${musicUrl}" target="_blank" class="bg-purple-500 text-white text-center py-2 rounded-xl text-xs font-bold">Download MP3</a>
+                        </div>
+                    `;
+                    saveLog(title, 'Success', url.substring(0,20));
+                } else {
+                    resDiv.innerHTML = `<p class="text-red-400">Gagal: Format data tidak dikenali.</p>`;
+                }
             } catch (err) {
-               resDiv.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
-          }
-     }
+                resDiv.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
+            }
+        }
+
+        // QR
+        function makeQR() {
+            const text = document.getElementById('qr-text').value;
+            if(!text) return;
+            document.getElementById('qr-result').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(text)}" class="rounded-xl">`;
+            saveLog('QR Maker', 'Generate', text.substring(0,10));
+        }
+
+        // PASSWORD
+        function makePassword() {
+            const len = document.getElementById('pass-len').value;
+            const type = document.getElementById('pass-type').value;
+            let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            if(type === 'Complex') chars += "!@#$%^&*";
+            let pass = Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+            document.getElementById('pass-result').value = pass;
+            saveLog('Password', 'Generate', `Len: ${len}`);
+        }
+
+        // JSON
+        function jsonFormat() {
+            try {
+                const i = document.getElementById('json-input');
+                i.value = JSON.stringify(JSON.parse(i.value), null, 2);
+                document.getElementById('json-status').innerText = '✓ Formatted';
+                document.getElementById('json-status').className = 'text-center text-[10px] font-bold text-green-400';
+                saveLog('JSON Tools', 'Format', 'Success');
+            } catch(e) { 
+                document.getElementById('json-status').innerText = 'Error: Invalid JSON'; 
+                document.getElementById('json-status').className = 'text-center text-[10px] font-bold text-red-400';
+            }
+        }
+        function jsonMinify() {
+            try {
+                const i = document.getElementById('json-input');
+                i.value = JSON.stringify(JSON.parse(i.value));
+                saveLog('JSON Tools', 'Minify', 'Success');
+            } catch(e) {}
+        }
+
+        // BASE64
+        function base64Encode() {
+            const v = document.getElementById('b64-input').value;
+            document.getElementById('b64-output').value = btoa(v);
+            saveLog('Base64', 'Encode', 'Success');
+        }
+        function base64Decode() {
+            try {
+                const v = document.getElementById('b64-input').value;
+                document.getElementById('b64-output').value = atob(v);
+                saveLog('Base64', 'Decode', 'Success');
+            } catch(e) { document.getElementById('b64-output').value = 'Error'; }
+        }
+
+        // GENERIC
+        function genericAction(title) {
+            document.getElementById('gen-result').innerText = `Module ${title} executed.`;
+            saveLog(title, 'Execute', 'Success');
+        }
+
         // ================== SYSTEM CONTROL ==================
         function switchTab(tab) {
             ['user-grid', 'dev-grid', 'history-view', 'ai-view', 'settings-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
@@ -405,12 +477,26 @@
         function closeModal() { document.getElementById('modal').classList.add('hidden'); }
         function verifyDev() { if (document.getElementById('dev-pin').value === APIS.pin) { state.isDev = true; closeDevAuth(); switchTab('home'); renderTools('dev'); } else alert('Salah'); }
 
-        window.onload = async () => {
-            await initSupabase();
+                // ================== ONLOAD (VERSI ANTI-HITAM) ==================
+        window.onload = () => {
+            // 1. Render UI detik ini juga!
             renderTools('user');
-            setInterval(() => { const n = new Date(); document.getElementById('clock').innerText = n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0'); }, 1000);
             lucide.createIcons();
+            
+            // 2. Jalankan Jam
+            setInterval(() => { 
+                const n = new Date(); 
+                const clockEl = document.getElementById('clock');
+                if(clockEl) clockEl.innerText = n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0'); 
+            }, 1000);
+            
+            // 3. Init DB (Tanpa AWAIT, biarkan jalan di background)
+            initSupabase().catch(err => {
+                console.log("Database offline, mode lokal aktif.");
+                document.getElementById('system-status').innerText = 'Status: Offline Mode';
+            });
         };
+
     </script>
 </body>
-          </html>
+</html>
