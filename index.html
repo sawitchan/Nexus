@@ -321,69 +321,43 @@
         }
 
         // ================== HELPER FUNCTIONS ==================
-        function processMedia(title) {
-            const url = document.getElementById('media-url').value;
-            if(!url) return alert("Masukkan URL");
-            document.getElementById('media-result').innerHTML = `<p class="text-purple-400 animate-pulse">Connecting to backend...</p>`;
-            document.getElementById('media-result').classList.remove('hidden');
-            setTimeout(() => {
-                document.getElementById('media-result').innerHTML = `<p class="text-green-400">Success (Simulated)</p><p class="text-[8px] text-gray-500 mt-2">Backend function not deployed yet.</p>`;
-                saveLog(title, 'Download', url.substring(0,20));
-            }, 1000);
-        }
+    async function processMedia(title) {
+    const url = document.getElementById('media-url').value;
+    if(!url) return alert("Masukkan URL");
 
-        function makeQR() {
-            const text = document.getElementById('qr-text').value;
-            if(!text) return;
-            document.getElementById('qr-result').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(text)}" class="rounded-xl">`;
-            saveLog('QR Maker', 'Generate', text.substring(0,10));
-        }
+    const resDiv = document.getElementById('media-result');
+    resDiv.innerHTML = `<p class="text-purple-400 animate-pulse">Menghubungi Server...</p>`;
+    resDiv.classList.remove('hidden');
 
-        function makePassword() {
-            const len = document.getElementById('pass-len').value;
-            const type = document.getElementById('pass-type').value;
-            let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            if(type === 'Complex') chars += "!@#$%^&*";
-            let pass = Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-            document.getElementById('pass-result').value = pass;
-            saveLog('Password', 'Generate', `Len: ${len}`);
-        }
+    try {
+        const { data, error } = await supabase.functions.invoke('tiktok-dl', {
+            body: { url: url }
+        });
 
-        function jsonFormat() {
-            try {
-                const i = document.getElementById('json-input');
-                i.value = JSON.stringify(JSON.parse(i.value), null, 2);
-                document.getElementById('json-status').innerText = '✓ Formatted';
-                document.getElementById('json-status').className = 'text-center text-[10px] font-bold text-green-400';
-                saveLog('JSON Tools', 'Format', 'Success');
-            } catch(e) { document.getElementById('json-status').innerText = 'Error'; }
-        }
-        function jsonMinify() {
-            try {
-                const i = document.getElementById('json-input');
-                i.value = JSON.stringify(JSON.parse(i.value));
-                saveLog('JSON Tools', 'Minify', 'Success');
-            } catch(e) {}
-        }
+        if (error) throw error;
 
-        function base64Encode() {
-            const v = document.getElementById('b64-input').value;
-            document.getElementById('b64-output').value = btoa(v);
-            saveLog('Base64', 'Encode', 'Success');
-        }
-        function base64Decode() {
-            try {
-                const v = document.getElementById('b64-input').value;
-                document.getElementById('b64-output').value = atob(v);
-                saveLog('Base64', 'Decode', 'Success');
-            } catch(e) { document.getElementById('b64-output').value = 'Error'; }
-        }
+        const videoUrl = data.data?.play || data.play || null;
+        const musicUrl = data.data?.music || data.music || null;
 
-        function genericAction(title) {
-            document.getElementById('gen-result').innerText = `Module ${title} executed.`;
-            saveLog(title, 'Execute', 'Success');
-        }
+        if(videoUrl) {
+            resDiv.innerHTML = `
+                <p class="text-green-400 font-bold mb-4">Berhasil!</p>
+                <video controls class="w-full rounded-xl mb-4" src="${videoUrl}"></video>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="${videoUrl}" target="_blank" class="bg-green-500 text-black text-center py-2 rounded-xl text-xs font-bold">Download Video</a>
+                    <a href="${musicUrl}" target="_blank" class="bg-purple-500 text-white text-center py-2 rounded-xl text-xs font-bold">Download MP3</a>
+                  </div>
+               `;
+               saveLog(title, 'Success', url.substring(0,20));
+             } else {
+                resDiv.innerHTML = `<p class="text-red-400">Format data tidak dikenali. Cek Console.</p>`;
+                console.log(data);
+          }
 
+            } catch (err) {
+               resDiv.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
+          }
+     }
         // ================== SYSTEM CONTROL ==================
         function switchTab(tab) {
             ['user-grid', 'dev-grid', 'history-view', 'ai-view', 'settings-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
