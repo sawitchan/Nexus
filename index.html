@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS ULTIMATE V7</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        :root { --primary: #a855f7; --bg: #000000; --card-bg: rgba(255, 255, 255, 0.03); --border: rgba(255, 255, 255, 0.08); }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 120px; overflow-x: hidden; }
+        .premium-glass { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); transition: all 0.2s ease; }
+        .premium-glass:active { transform: scale(0.98); }
+        .active-nav { color: var(--primary) !important; filter: drop-shadow(0 0 8px var(--primary)); }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .cat-active { background: var(--primary) !important; color: white !important; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4); }
+        .nexus-gradient { background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%); }
+        .history-card { border-left: 4px solid var(--primary); }
+        #chat-container { display: flex; flex-direction: column; height: calc(100vh - 280px); }
+        .modal-scroll::-webkit-scrollbar { width: 4px; }
+        .modal-scroll::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.5); border-radius: 10px; }
+        input, select, textarea { transition: border-color 0.2s; }
+        .result-box { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(168, 85, 247, 0.3); }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="p-6 sticky top-0 z-[100] bg-black/80 backdrop-blur-xl border-b border-white/5 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 nexus-gradient rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <i data-lucide="zap" class="text-white fill-current"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-[800] italic tracking-tighter leading-none">NEXUS<span class="text-purple-500">V7</span></h1>
+                <p id="system-status" class="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">Status: Connecting...</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="text-right">
+                <p id="clock" class="text-xs font-black">00:00</p>
+                <p class="text-[7px] text-green-500 font-bold uppercase">Cloud Sync</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- CATEGORY -->
+    <div id="category-bar" class="flex gap-2 overflow-x-auto px-6 py-5 hide-scroll">
+        <button onclick="filterTools('All')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap cat-active">All</button>
+        <button onclick="filterTools('Media')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap">Medsos</button>
+        <button onclick="filterTools('AI')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap">AI Brain</button>
+        <button onclick="filterTools('Files')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap">Files</button>
+        <button onclick="filterTools('Dev')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap">Dev Only</button>
+    </div>
+
+    <!-- MAIN -->
+    <main class="px-6" id="main-content">
+        <div id="user-grid" class="grid grid-cols-2 gap-4"></div>
+        <div id="dev-grid" class="hidden grid grid-cols-2 gap-3"></div>
+        
+        <div id="history-view" class="hidden">
+            <div class="flex justify-between items-end mb-6">
+                <h2 class="text-2xl font-black italic uppercase">History Log</h2>
+                <select id="filter-month" class="bg-white/5 border border-white/10 text-[10px] p-2 rounded-lg outline-none" onchange="renderHistory()">
+                    <option value="all">All Months</option>
+                    <option value="0">Januari</option>
+                    <option value="1">Februari</option>
+                    <option value="2">Maret</option>
+                </select>
+            </div>
+            <div id="history-list" class="space-y-4"></div>
+        </div>
+
+        <div id="ai-view" class="hidden">
+            <div id="chat-container" class="premium-glass rounded-[2.5rem] p-6 flex flex-col">
+                <div id="chat-messages" class="flex-1 overflow-y-auto space-y-4 pr-2 hide-scroll"></div>
+                <div class="mt-4 flex gap-2">
+                    <input id="chat-input" type="text" placeholder="Tanya Nexus..." class="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl outline-none text-xs" onkeypress="if(event.key==='Enter')sendMessage()">
+                    <button onclick="sendMessage()" class="w-12 h-12 nexus-gradient rounded-2xl flex items-center justify-center"><i data-lucide="send" size="18"></i></button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="settings-view" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-black italic uppercase">Settings Hub</h2>
+                <span class="text-[10px] text-purple-400 font-bold">20 Tools Active</span>
+            </div>
+            <div id="settings-grid" class="grid grid-cols-2 gap-4"></div>
+        </div>
+    </main>
+
+    <!-- NAV -->
+    <nav class="fixed bottom-6 left-6 right-6 h-20 premium-glass rounded-[2.5rem] flex justify-around items-center z-[200] border-white/10">
+        <button onclick="switchTab('home')" id="nav-home" class="p-3 active-nav"><i data-lucide="layout-grid"></i></button>
+        <button onclick="switchTab('history')" id="nav-history" class="p-3 text-gray-600"><i data-lucide="calendar-days"></i></button>
+        <div onclick="openDevAuth()" class="w-16 h-16 nexus-gradient rounded-full flex items-center justify-center -mt-10 border-4 border-black shadow-xl shadow-purple-600/30">
+            <i data-lucide="shield-check" class="text-white"></i>
+        </div>
+        <button onclick="switchTab('ai')" id="nav-ai" class="p-3 text-gray-600"><i data-lucide="bot"></i></button>
+        <button onclick="switchTab('settings')" id="nav-settings" class="p-3 text-gray-600"><i data-lucide="settings"></i></button>
+    </nav>
+
+    <!-- MODAL -->
+    <div id="modal" class="fixed inset-0 z-[300] hidden">
+        <div class="absolute inset-0 bg-black/95 backdrop-blur-xl" onclick="closeModal()"></div>
+        <div class="absolute bottom-0 left-0 right-0 premium-glass rounded-t-[3rem] p-8 max-h-[90vh] overflow-y-auto border-t border-purple-500/20 modal-scroll">
+            <div class="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8"></div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div id="dev-auth" class="fixed inset-0 z-[400] hidden flex items-center justify-center bg-black/90 backdrop-blur-3xl p-10">
+        <div class="premium-glass p-8 rounded-[3rem] w-full max-w-sm text-center">
+            <h2 class="text-2xl font-black italic mb-6">DEV AUTHORIZATION</h2>
+            <input type="password" id="dev-pin" placeholder="••••••" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-center text-4xl font-mono tracking-[10px] outline-none mb-6">
+            <button onclick="verifyDev()" class="w-full nexus-gradient py-4 rounded-2xl font-black uppercase italic shadow-lg">Login System</button>
+            <button onclick="closeDevAuth()" class="mt-4 text-gray-500 font-bold uppercase text-[10px]">Batal</button>
+        </div>
+    </div>
+
+    <script>
+        // ================== KONFIGURASI SUPABASE LU ==================
+        const SUPABASE_URL = 'https://iddixsqqpjbyswsadjwv.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkZGl4c3FxcGpieXN3c2Fkand2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTUwNTYsImV4cCI6MjA4ODczMTA1Nn0.rXWDEi26WWE1VJQ2dwjpBXhK4YqRCgVC-HfxLkcdDbA';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const APIS = { pin: '144927' };
+        
+        // DATA TOOLS
+        const USER_TOOLS = [
+            { id: 'tt', cat: 'Media', title: 'TikTok DL', icon: 'video', color: '#ff0050', desc: 'Download HD Video' },
+            { id: 'ig', cat: 'Media', title: 'Instagram', icon: 'instagram', color: '#e1306c', desc: 'Save Reels & Stories' },
+            { id: 'yt', cat: 'Media', title: 'YouTube', icon: 'youtube', color: '#ff0000', desc: 'Audio & Video 4K' },
+            { id: 'fb', cat: 'Media', title: 'Facebook', icon: 'facebook', color: '#1877f2', desc: 'Save Post Video' },
+            { id: 'tw', cat: 'Media', title: 'Twitter/X', icon: 'twitter', color: '#1da1f2', desc: 'Download Media X' },
+            { id: 'sc', cat: 'Media', title: 'SoundCloud', icon: 'music', color: '#ff3300', desc: 'Extract High Quality' },
+            { id: 'ai-gen', cat: 'AI', title: 'Nexus Art', icon: 'palette', color: '#a855f7', desc: 'Text to Masterpiece' },
+            { id: 'bg-rem', cat: 'AI', title: 'Remover', icon: 'image-minus', color: '#ec4899', desc: 'Clean Background' },
+            { id: 'upscale', cat: 'AI', title: 'Upscaler', icon: 'maximize', color: '#f59e0b', desc: 'Ultra HD Quality' },
+            { id: 'anime', cat: 'AI', title: 'To Anime', icon: 'smile', color: '#10b981', desc: 'Photo to Style' },
+            { id: 'ocr', cat: 'Files', title: 'OCR Scan', icon: 'scan-text', color: '#3b82f6', desc: 'Image to Text' },
+            { id: 'pdf', cat: 'Files', title: 'PDF Engine', icon: 'file-type-2', color: '#ef4444', desc: 'Manage PDF Files' },
+            { id: 'translate', cat: 'Files', title: 'Translate', icon: 'languages', color: '#6366f1', desc: 'Multi-Language' },
+            { id: 'short', cat: 'Files', title: 'Shorten', icon: 'link', color: '#d946ef', desc: 'Nexus Shortlink' },
+            { id: 'weather', cat: 'Files', title: 'Weather', icon: 'cloud-sun', color: '#0ea5e9', desc: 'Real-time Forecast' },
+            { id: 'speed', cat: 'Files', title: 'SpeedTest', icon: 'gauge', color: '#f97316', desc: 'Check Network' },
+            { id: 'qr', cat: 'Files', title: 'QR Maker', icon: 'qr-code', color: '#14b8a6', desc: 'Custom QR Gen' },
+            { id: 'pass', cat: 'Files', title: 'Password', icon: 'key', color: '#fb7185', desc: 'Secure Generator' },
+            { id: 'cur', cat: 'Files', title: 'Currency', icon: 'banknote', color: '#22c55e', desc: 'Live FX Rate' },
+            { id: 'calc', cat: 'Files', title: 'Unit Conv', icon: 'scale', color: '#facc15', desc: 'Metric Conversion' }
+        ];
+
+        const DEV_TOOLS = [
+            { id: 'dev-json', title: 'JSON Tools', icon: 'braces', color: '#facc15', desc: 'Format & Validate' },
+            { id: 'dev-base64', title: 'Base64 Kit', icon: 'binary', color: '#3b82f6', desc: 'Encode & Decode' },
+            { id: 'dev-hash', title: 'Hash Gen', icon: 'hash', color: '#ef4444', desc: 'MD5, SHA256' },
+            { id: 'dev-uuid', title: 'UUID Gen', icon: 'fingerprint', color: '#8b5cf6', desc: 'Unique ID Maker' },
+            { id: 'dev-unix', title: 'Unix Time', icon: 'clock', color: '#f59e0b', desc: 'Timestamp Convert' },
+            { id: 'dev-color', title: 'Color Conv', icon: 'palette', color: '#ec4899', desc: 'HEX RGB HSL' },
+            { id: 'dev-regex', title: 'Regex Test', icon: 'terminal', color: '#10b981', desc: 'Pattern Match' },
+            { id: 'dev-url', title: 'URL Codec', icon: 'link-2', color: '#84cc16', desc: 'Encode Decode' },
+            { id: 'dev-lorem', title: 'Lorem Gen', icon: 'text', color: '#a3e635', desc: 'Dummy Text' },
+            { id: 'dev-diff', title: 'Diff Check', icon: 'diff', color: '#f472b6', desc: 'Compare Text' },
+            { id: 'dev-word', title: 'Word Count', icon: 'type', color: '#3b82f6', desc: 'Stats Counter' },
+            { id: 'dev-case', title: 'Case Conv', icon: 'case-upper', color: '#8b5cf6', desc: 'Upper Lower' },
+            { id: 'dev-sort', title: 'Text Sort', icon: 'arrow-up-down', color: '#f59e0b', desc: 'Sort Lines' },
+            { id: 'dev-randnum', title: 'Rand Num', icon: 'dice-5', color: '#ef4444', desc: 'Random Gen' },
+            { id: 'dev-randstr', title: 'Rand Str', icon: 'shuffle', color: '#a3e635', desc: 'String Gen' },
+            { id: 'dev-bin', title: 'Binary Conv', icon: 'binary', color: '#6366f1', desc: 'Decimal Binary' }
+        ];
+
+        let state = { history: [], chat: [], isDev: false, user: null };
+
+        // ================== INIT SUPABASE ==================
+        async function initSupabase() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                state.user = session.user;
+                document.getElementById('system-status').innerText = 'Status: Cloud Ready';
+                document.getElementById('system-status').style.color = '#22c55e';
+                fetchHistory();
+            } else {
+                const { data, error } = await supabase.auth.signInAnonymously();
+                if (!error) {
+                    state.user = data.user;
+                    document.getElementById('system-status').innerText = 'Status: Synced';
+                    document.getElementById('system-status').style.color = '#22c55e';
+                } else {
+                    document.getElementById('system-status').innerText = 'Status: Error';
+                }
+            }
+        }
+
+        // ================== DB FUNCTIONS ==================
+        async function saveLog(name, type, detail) {
+            if (!state.user) return;
+            const tempLog = { id: 'temp-' + Date.now(), tool_name: name, action_type: type, detail: detail, created_at: new Date().toISOString() };
+            state.history.unshift(tempLog);
+            renderHistory();
+            await supabase.from('nexus_history').insert({ user_id: state.user.id, tool_name: name, action_type: type, detail: detail });
+            fetchHistory();
+        }
+
+        async function fetchHistory() {
+            if (!state.user) return;
+            const { data } = await supabase.from('nexus_history').select('*').eq('user_id', state.user.id).order('created_at', { ascending: false }).limit(50);
+            if (data) { state.history = data; renderHistory(); }
+        }
+
+        // ================== RENDER UI ==================
+        function renderTools(mode = 'user') {
+            const grid = mode === 'user' ? document.getElementById('user-grid') : document.getElementById('dev-grid');
+            const data = mode === 'user' ? USER_TOOLS : DEV_TOOLS;
+            grid.innerHTML = data.map(t => `
+                <div class="premium-glass p-6 rounded-[2.5rem] flex flex-col items-center text-center cursor-pointer" onclick="openTool('${t.id}', '${mode}')">
+                    <div class="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style="background: ${t.color}15; color: ${t.color}"><i data-lucide="${t.icon}" size="28"></i></div>
+                    <h3 class="text-[11px] font-black uppercase italic">${t.title}</h3>
+                    <p class="text-[8px] text-gray-500 mt-2 font-bold uppercase">${t.desc}</p>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+        
+        function renderSettingsHub() {
+            document.getElementById('settings-grid').innerHTML = USER_TOOLS.map(t => `
+                 <div class="premium-glass p-5 rounded-[2rem] flex flex-col items-center text-center cursor-pointer" onclick="openTool('${t.id}', 'user')">
+                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-3" style="background: ${t.color}15; color: ${t.color}"><i data-lucide="${t.icon}" size="24"></i></div>
+                    <h3 class="text-[10px] font-black uppercase italic">${t.title}</h3>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            const filter = document.getElementById('filter-month').value;
+            let filtered = filter === 'all' ? state.history : state.history.filter(h => new Date(h.created_at).getMonth() == filter);
+            list.innerHTML = filtered.length ? filtered.map(h => `
+                <div class="premium-glass p-5 rounded-2xl history-card flex justify-between items-center">
+                    <div>
+                        <h4 class="text-[11px] font-black uppercase italic">${h.tool_name}</h4>
+                        <p class="text-[8px] text-gray-500 font-bold mt-1">${h.action_type} • ${h.detail || '-'}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] font-black text-purple-400">${new Date(h.created_at).toLocaleDateString('id-ID')}</p>
+                    </div>
+                </div>
+            `).join('') : '<div class="text-center py-20 text-gray-600 font-bold uppercase text-[10px]">No History</div>';
+        }
+
+        // ================== TOOL LOGIC ==================
+        function openTool(id, mode) {
+            const tool = mode === 'user' ? USER_TOOLS.find(x => x.id === id) : DEV_TOOLS.find(x => x.id === id);
+            document.getElementById('modal').classList.remove('hidden');
+            let ui = '';
+            
+            if (tool.cat === 'Media') {
+                ui = `<div class="space-y-4">
+                    <input type="text" id="media-url" placeholder="Paste link..." class="w-full premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs font-bold">
+                    <div id="media-result" class="hidden result-box p-4 rounded-2xl text-center"></div>
+                    <button onclick="processMedia('${tool.title}')" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Process</button>
+                </div>`;
+            } else if (tool.id === 'qr') {
+                ui = `<div class="space-y-4">
+                    <input type="text" id="qr-text" placeholder="Input text..." class="w-full premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs font-bold">
+                    <div id="qr-result" class="flex justify-center"></div>
+                    <button onclick="makeQR()" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Generate QR</button>
+                </div>`;
+            } else if (tool.id === 'pass') {
+                ui = `<div class="space-y-4">
+                    <div class="flex gap-3">
+                        <input type="number" id="pass-len" value="12" class="w-20 premium-glass p-3 rounded-xl bg-transparent outline-none text-center font-bold">
+                        <select id="pass-type" class="flex-1 premium-glass p-3 rounded-xl bg-black font-bold text-xs"><option>Alphanumeric</option><option>Complex</option></select>
+                    </div>
+                    <button onclick="makePassword()" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Generate</button>
+                    <input type="text" id="pass-result" readonly class="w-full premium-glass p-4 rounded-2xl bg-transparent text-center text-purple-400 font-mono text-sm">
+                </div>`;
+            } else if (tool.id === 'dev-json') {
+                 ui = `<div class="space-y-4">
+                    <textarea id="json-input" placeholder='{"key": "value"}' class="w-full h-32 premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs font-mono"></textarea>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="jsonFormat()" class="premium-glass py-3 rounded-xl font-bold text-xs">Format</button>
+                        <button onclick="jsonMinify()" class="premium-glass py-3 rounded-xl font-bold text-xs">Minify</button>
+                    </div>
+                    <p id="json-status" class="text-center text-[10px] font-bold"></p>
+                </div>`;
+            } else if (tool.id === 'dev-base64') {
+                 ui = `<div class="space-y-4">
+                    <textarea id="b64-input" placeholder="Input text..." class="w-full h-24 premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs font-mono"></textarea>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="base64Encode()" class="nexus-gradient py-3 rounded-xl font-bold text-xs">Encode</button>
+                        <button onclick="base64Decode()" class="premium-glass py-3 rounded-xl font-bold text-xs">Decode</button>
+                    </div>
+                    <textarea id="b64-output" class="w-full h-24 result-box p-4 rounded-2xl bg-transparent outline-none text-xs text-purple-400" readonly></textarea>
+                </div>`;
+            } else {
+                ui = `<div class="space-y-4 text-center">
+                    <div class="premium-glass p-6 rounded-2xl"><p class="text-[10px] text-gray-400 uppercase">${tool.desc}</p></div>
+                    <button onclick="genericAction('${tool.title}')" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Run Module</button>
+                    <div id="gen-result" class="result-box p-4 rounded-2xl text-xs"></div>
+                </div>`;
+            }
+
+            document.getElementById('modal-content').innerHTML = `
+                <div class="flex items-center gap-5 mb-8">
+                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: ${tool.color}20; color: ${tool.color}"><i data-lucide="${tool.icon}" size="32"></i></div>
+                    <div>
+                        <h2 class="text-2xl font-black italic uppercase">${tool.title}</h2>
+                        <p class="text-[9px] text-purple-400 font-bold uppercase tracking-[0.3em] mt-1">${tool.desc}</p>
+                    </div>
+                </div>
+                ${ui}
+            `;
+            lucide.createIcons();
+        }
+
+        // ================== HELPER FUNCTIONS ==================
+        function processMedia(title) {
+            const url = document.getElementById('media-url').value;
+            if(!url) return alert("Masukkan URL");
+            document.getElementById('media-result').innerHTML = `<p class="text-purple-400 animate-pulse">Connecting to backend...</p>`;
+            document.getElementById('media-result').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('media-result').innerHTML = `<p class="text-green-400">Success (Simulated)</p><p class="text-[8px] text-gray-500 mt-2">Backend function not deployed yet.</p>`;
+                saveLog(title, 'Download', url.substring(0,20));
+            }, 1000);
+        }
+
+        function makeQR() {
+            const text = document.getElementById('qr-text').value;
+            if(!text) return;
+            document.getElementById('qr-result').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(text)}" class="rounded-xl">`;
+            saveLog('QR Maker', 'Generate', text.substring(0,10));
+        }
+
+        function makePassword() {
+            const len = document.getElementById('pass-len').value;
+            const type = document.getElementById('pass-type').value;
+            let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            if(type === 'Complex') chars += "!@#$%^&*";
+            let pass = Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+            document.getElementById('pass-result').value = pass;
+            saveLog('Password', 'Generate', `Len: ${len}`);
+        }
+
+        function jsonFormat() {
+            try {
+                const i = document.getElementById('json-input');
+                i.value = JSON.stringify(JSON.parse(i.value), null, 2);
+                document.getElementById('json-status').innerText = '✓ Formatted';
+                document.getElementById('json-status').className = 'text-center text-[10px] font-bold text-green-400';
+                saveLog('JSON Tools', 'Format', 'Success');
+            } catch(e) { document.getElementById('json-status').innerText = 'Error'; }
+        }
+        function jsonMinify() {
+            try {
+                const i = document.getElementById('json-input');
+                i.value = JSON.stringify(JSON.parse(i.value));
+                saveLog('JSON Tools', 'Minify', 'Success');
+            } catch(e) {}
+        }
+
+        function base64Encode() {
+            const v = document.getElementById('b64-input').value;
+            document.getElementById('b64-output').value = btoa(v);
+            saveLog('Base64', 'Encode', 'Success');
+        }
+        function base64Decode() {
+            try {
+                const v = document.getElementById('b64-input').value;
+                document.getElementById('b64-output').value = atob(v);
+                saveLog('Base64', 'Decode', 'Success');
+            } catch(e) { document.getElementById('b64-output').value = 'Error'; }
+        }
+
+        function genericAction(title) {
+            document.getElementById('gen-result').innerText = `Module ${title} executed.`;
+            saveLog(title, 'Execute', 'Success');
+        }
+
+        // ================== SYSTEM CONTROL ==================
+        function switchTab(tab) {
+            ['user-grid', 'dev-grid', 'history-view', 'ai-view', 'settings-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('category-bar').classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
+            document.getElementById('nav-' + (tab === 'home' ? 'home' : tab))?.classList.add('active-nav');
+            
+            if (tab === 'home') document.getElementById(state.isDev ? 'dev-grid' : 'user-grid').classList.remove('hidden');
+            else if (tab === 'settings') { document.getElementById('settings-view').classList.remove('hidden'); document.getElementById('category-bar').classList.add('hidden'); renderSettingsHub(); }
+            else { document.getElementById(tab + '-view').classList.remove('hidden'); document.getElementById('category-bar').classList.add('hidden'); }
+            
+            if (tab === 'history') renderHistory();
+            if (tab === 'ai') renderChat();
+        }
+
+        function filterTools(cat) {
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('cat-active'));
+            event.target.classList.add('cat-active');
+            if (cat === 'Dev') { openDevAuth(); return; }
+            state.isDev = false;
+            switchTab('home');
+            const grid = document.getElementById('user-grid');
+            const filtered = cat === 'All' ? USER_TOOLS : USER_TOOLS.filter(t => t.cat === cat);
+            grid.innerHTML = filtered.map(t => `<div class="premium-glass p-6 rounded-[2.5rem] flex flex-col items-center text-center cursor-pointer" onclick="openTool('${t.id}', 'user')"><div class="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style="background: ${t.color}15; color: ${t.color}"><i data-lucide="${t.icon}" size="28"></i></div><h3 class="text-[11px] font-black uppercase italic">${t.title}</h3></div>`).join('');
+            lucide.createIcons();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            if (!input.value) return;
+            state.chat.push({ role: 'user', text: input.value, time: new Date().toLocaleTimeString() });
+            renderChat();
+            setTimeout(() => { state.chat.push({ role: 'bot', text: `Response for: ${input.value}`, time: new Date().toLocaleTimeString() }); renderChat(); }, 800);
+            input.value = '';
+        }
+
+        function renderChat() {
+            const box = document.getElementById('chat-messages');
+            box.innerHTML = state.chat.map(c => `<div class="${c.role === 'user' ? 'ml-auto bg-purple-600/20' : 'mr-auto bg-white/5'} p-4 rounded-2xl max-w-[85%] border border-white/10"><p class="text-xs">${c.text}</p></div>`).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function openDevAuth() { document.getElementById('dev-auth').classList.remove('hidden'); }
+        function closeDevAuth() { document.getElementById('dev-auth').classList.add('hidden'); }
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+        function verifyDev() { if (document.getElementById('dev-pin').value === APIS.pin) { state.isDev = true; closeDevAuth(); switchTab('home'); renderTools('dev'); } else alert('Salah'); }
+
+        window.onload = async () => {
+            await initSupabase();
+            renderTools('user');
+            setInterval(() => { const n = new Date(); document.getElementById('clock').innerText = n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0'); }, 1000);
+            lucide.createIcons();
+        };
+    </script>
+</body>
+          </html>
