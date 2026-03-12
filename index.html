@@ -105,117 +105,154 @@
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://iddixsqqpjbyswsadjwv.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkZGl4c3FxcGpieXN3c2Fkand2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTUwNTYsImV4cCI6MjA4ODczMTA1Nn0.rXWDEi26WWE1VJQ2dwjpBXhK4YqRCgVC-HfxLkcdDbA';
-        
-        let supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const APIS = { pin: '144927' };
-        
-        const USER_TOOLS = [
-            { id: 'tt', cat: 'Media', title: 'TikTok DL', icon: 'video', color: '#ff0050', desc: 'Download HD Video' },
-            { id: 'ig', cat: 'Media', title: 'Instagram', icon: 'instagram', color: '#e1306c', desc: 'Save Reels & Stories' },
-            { id: 'yt', cat: 'Media', title: 'YouTube', icon: 'youtube', color: '#ff0000', desc: 'Audio & Video 4K' },
-            { id: 'qr', cat: 'Files', title: 'QR Maker', icon: 'qr-code', color: '#14b8a6', desc: 'Custom QR Gen' },
-            { id: 'pass', cat: 'Files', title: 'Password', icon: 'key', color: '#fb7185', desc: 'Secure Generator' }
-        ];
+    const SUPABASE_URL = 'https://iddixsqqpjbyswsadjwv.supabase.co'; 
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkZGl4c3FxcGpieXN3c2Fkand2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTUwNTYsImV4cCI6MjA4ODczMTA1Nn0.rXWDEi26WWE1VJQ2dwjpBXhK4YqRCgVC-HfxLkcdDbA';
+    
+    let supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const APIS = { pin: '144927' };
+    
+    const USER_TOOLS = [
+        { id: 'tt', cat: 'Media', title: 'TikTok DL', icon: 'video', color: '#ff0050', desc: 'Download HD Video' },
+        { id: 'ig', cat: 'Media', title: 'Instagram', icon: 'instagram', color: '#e1306c', desc: 'Save Reels & Stories' },
+        { id: 'yt', cat: 'Media', title: 'YouTube', icon: 'youtube', color: '#ff0000', desc: 'Audio & Video 4K' },
+        { id: 'qr', cat: 'Files', title: 'QR Maker', icon: 'qr-code', color: '#14b8a6', desc: 'Custom QR Gen' },
+        { id: 'pass', cat: 'Files', title: 'Password', icon: 'key', color: '#fb7185', desc: 'Secure Generator' }
+    ];
 
-        let state = { history: [], chat: [], isDev: false, user: null };
+    let state = { history: [], chat: [], isDev: false, user: null };
 
-        async function initSupabase() {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                    state.user = session.user;
-                } else {
-                    const { data } = await supabase.auth.signInAnonymously();
-                    state.user = data?.user;
-                }
-                document.getElementById('system-status').innerText = 'Status: Synced';
-                document.getElementById('system-status').style.color = '#22c55e';
-            } catch(e) {
-                document.getElementById('system-status').innerText = 'Status: Offline';
-            }
-        }
-
-        function renderTools(mode = 'user') {
-            const grid = mode === 'user' ? document.getElementById('user-grid') : document.getElementById('dev-grid');
-            const data = mode === 'user' ? USER_TOOLS : []; 
-            grid.innerHTML = data.map(t => `
-                <div class="premium-glass p-6 rounded-[2.5rem] flex flex-col items-center text-center cursor-pointer" onclick="openTool('${t.id}', '${mode}')">
-                    <div class="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style="background: ${t.color}15; color: ${t.color}"><i data-lucide="${t.icon}" size="28"></i></div>
-                    <h3 class="text-[11px] font-black uppercase italic">${t.title}</h3>
-                </div>
-            `).join('');
-            if (window.lucide) lucide.createIcons();
-        }
-
-        function openTool(id, mode) {
-            const tool = USER_TOOLS.find(x => x.id === id);
-            if(!tool) return;
-            document.getElementById('modal').classList.remove('hidden');
-            let ui = `<div class="space-y-4">
-                <input type="text" id="tool-input" placeholder="Input data..." class="w-full premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs font-bold">
-                <div id="tool-result" class="hidden result-box p-4 rounded-2xl text-center"></div>
-                <button onclick="processTool('${tool.id}', '${tool.title}')" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Execute</button>
-            </div>`;
-
-            document.getElementById('modal-content').innerHTML = `
-                <div class="flex items-center gap-5 mb-8">
-                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: ${tool.color}20; color: ${tool.color}"><i data-lucide="${tool.icon}" size="32"></i></div>
-                    <div><h2 class="text-2xl font-black italic uppercase">${tool.title}</h2></div>
-                </div>${ui}`;
+    // FUNGSI PAKSA ICON (PENTING!)
+    function refreshIcons() {
+        if (typeof lucide !== 'undefined') {
             lucide.createIcons();
+        } else {
+            // Jika lucide belum siap, tunggu 300ms lalu coba lagi
+            setTimeout(refreshIcons, 300);
         }
+    }
 
-        async function processTool(id, title) {
-            const val = document.getElementById('tool-input').value;
-            const resDiv = document.getElementById('tool-result');
-            resDiv.classList.remove('hidden');
-            resDiv.innerHTML = 'Processing...';
-
-            if (id === 'tt') {
-                try {
-                    const { data } = await supabase.functions.invoke('quick-action', { body: { url: val } });
-                    const video = data?.play || data?.data?.play;
-                    if(video) {
-                        resDiv.innerHTML = `<video src="${video}" controls class="w-full rounded-lg mb-2"></video><a href="${video}" class="block bg-green-500 p-2 rounded-lg text-xs font-bold text-black">Download</a>`;
-                    } else { resDiv.innerHTML = 'Gagal ambil video'; }
-                } catch(e) { resDiv.innerHTML = 'Error: ' + e.message; }
+    async function initSupabase() {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                state.user = session.user;
             } else {
-                resDiv.innerHTML = 'Module ' + title + ' active!';
+                const { data } = await supabase.auth.signInAnonymously();
+                state.user = data?.user;
             }
+            document.getElementById('system-status').innerText = 'Status: Synced';
+            document.getElementById('system-status').style.color = '#22c55e';
+        } catch(e) {
+            document.getElementById('system-status').innerText = 'Status: Offline';
         }
+    }
 
-        function switchTab(tab) {
-            ['user-grid', 'history-view', 'ai-view', 'settings-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            document.getElementById(tab === 'home' ? 'user-grid' : tab + '-view').classList.remove('hidden');
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
-            document.getElementById('nav-' + (tab === 'home' ? 'home' : tab)).classList.add('active-nav');
-        }
+    function renderTools(mode = 'user') {
+        const grid = mode === 'user' ? document.getElementById('user-grid') : document.getElementById('dev-grid');
+        const data = mode === 'user' ? USER_TOOLS : []; 
+        grid.innerHTML = data.map(t => `
+            <div class="premium-glass p-6 rounded-[2.5rem] flex flex-col items-center text-center cursor-pointer" onclick="openTool('${t.id}', '${mode}')">
+                <div class="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style="background: ${t.color}15; color: ${t.color}">
+                    <i data-lucide="${t.icon}" size="28"></i>
+                </div>
+                <h3 class="text-[11px] font-black uppercase italic">${t.title}</h3>
+            </div>
+        `).join('');
+        refreshIcons();
+    }
 
-        function closeModal() { document.getElementById('modal').classList.add('hidden'); }
-        function openDevAuth() { document.getElementById('dev-auth').classList.remove('hidden'); }
-        function closeDevAuth() { document.getElementById('dev-auth').classList.add('hidden'); }
+    function openTool(id, mode) {
+        const tool = USER_TOOLS.find(x => x.id === id);
+        if(!tool) return;
+        document.getElementById('modal').classList.remove('hidden');
+        let ui = `<div class="space-y-4">
+            <input type="text" id="tool-input" placeholder="Paste Link / Input..." class="w-full premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs font-bold text-white">
+            <div id="tool-result" class="hidden result-box p-4 rounded-2xl text-center overflow-hidden"></div>
+            <button id="exec-btn" onclick="processTool('${tool.id}', '${tool.title}')" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Execute</button>
+        </div>`;
 
-        // ================== ONLOAD (THE FIX) ==================
-        window.onload = () => {
-            // 1. Render UI dulu biar gak hitam
-            renderTools('user');
-            
-            // 2. Paksa Icon muncul
-            if (window.lucide) {
-                lucide.createIcons();
+        document.getElementById('modal-content').innerHTML = `
+            <div class="flex items-center gap-5 mb-8">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: ${tool.color}20; color: ${tool.color}"><i data-lucide="${tool.icon}" size="32"></i></div>
+                <div><h2 class="text-2xl font-black italic uppercase">${tool.title}</h2></div>
+            </div>${ui}`;
+        refreshIcons();
+    }
+
+    async function processTool(id, title) {
+        const val = document.getElementById('tool-input').value;
+        const resDiv = document.getElementById('tool-result');
+        const btn = document.getElementById('exec-btn');
+        
+        if(!val) return alert("Isi dulu, Tuan!");
+        
+        resDiv.classList.remove('hidden');
+        resDiv.innerHTML = '<p class="text-xs animate-pulse">Processing System...</p>';
+        btn.disabled = true;
+
+        if (id === 'tt') {
+            try {
+                // PANGGIL EDGE FUNCTION LU
+                const { data, error } = await supabase.functions.invoke('quick-action', { 
+                    body: { url: val } 
+                });
+                
+                if(error) throw error;
+
+                const video = data?.play || data?.data?.play;
+                if(video) {
+                    resDiv.innerHTML = `
+                        <video src="${video}" controls class="w-full rounded-lg mb-4"></video>
+                        <a href="${video}" target="_blank" class="block w-full bg-green-500 p-3 rounded-lg text-[10px] font-black text-black uppercase">Save Video HD</a>
+                    `;
+                } else { 
+                    resDiv.innerHTML = '<p class="text-red-400 text-xs">Gagal: Video tidak ditemukan atau link salah.</p>'; 
+                }
+            } catch(e) { 
+                resDiv.innerHTML = '<p class="text-red-400 text-xs">Error: ' + e.message + '</p>'; 
             }
+        } else {
+            resDiv.innerHTML = '<p class="text-purple-400 text-xs">Module ' + title + ' active!</p>';
+        }
+        btn.disabled = false;
+    }
 
-            // 3. Jam Jalan
-            setInterval(() => { 
-                const n = new Date(); 
-                document.getElementById('clock').innerText = n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0'); 
-            }, 1000);
+    function switchTab(tab) {
+        ['user-grid', 'history-view', 'ai-view', 'settings-view'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.classList.add('hidden');
+        });
+        
+        const target = tab === 'home' ? 'user-grid' : tab + '-view';
+        const targetEl = document.getElementById(target);
+        if(targetEl) targetEl.classList.remove('hidden');
+        
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
+        document.getElementById('nav-' + (tab === 'home' ? 'home' : tab)).classList.add('active-nav');
+        refreshIcons();
+    }
 
-            // 4. Baru hubungkan ke Supabase
-            initSupabase();
-        };
+    function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+    function openDevAuth() { document.getElementById('dev-auth').classList.remove('hidden'); }
+    function closeDevAuth() { document.getElementById('dev-auth').classList.add('hidden'); }
+
+    // THE FINAL ONLOAD
+    window.onload = () => {
+        renderTools('user');
+        
+        // Jam
+        setInterval(() => { 
+            const n = new Date(); 
+            const clock = document.getElementById('clock');
+            if(clock) clock.innerText = n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0'); 
+        }, 1000);
+
+        // Init DB & Sync
+        initSupabase();
+        
+        // Paksa refresh icon sekali lagi setelah 1 detik buat jaga-jaga
+        setTimeout(refreshIcons, 1000);
+    };
     </script>
 </body>
 </html>
