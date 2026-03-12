@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEXUS ULTIMATE V7</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -30,7 +30,7 @@
             </div>
             <div>
                 <h1 class="text-xl font-[800] italic tracking-tighter leading-none">NEXUS<span class="text-purple-500">V7</span></h1>
-                <p id="system-status" class="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">Status: Offline</p>
+                <p id="system-status" class="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">Status: Connecting...</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -49,8 +49,6 @@
 
     <main class="px-6" id="main-content">
         <div id="user-grid" class="grid grid-cols-2 gap-4"></div>
-        <div id="ai-view" class="hidden">
-            </div>
     </main>
 
     <nav class="fixed bottom-6 left-6 right-6 h-20 premium-glass rounded-[2.5rem] flex justify-around items-center z-[200] border-white/10">
@@ -81,16 +79,34 @@
         { id: 'pass', cat: 'Files', title: 'Password', icon: 'key', color: '#fb7185', desc: 'Secure Generator' }
     ];
 
+    let currentUser = null;
+
     async function initSupabase() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) await supabase.auth.signInAnonymously();
-            
+            if (!session) {
+                const { data } = await supabase.auth.signInAnonymously();
+                currentUser = data.user;
+            } else {
+                currentUser = session.user;
+            }
             document.getElementById('system-status').innerText = 'Status: Synced';
             document.getElementById('system-status').style.color = '#22c55e';
         } catch(e) {
             document.getElementById('system-status').innerText = 'Status: Local Mode';
         }
+    }
+
+    async function saveHistory(toolName, detail) {
+        if (!currentUser) return;
+        await supabase.from('nexus_history').insert([
+            { 
+                user_id: currentUser.id, 
+                tool_name: toolName, 
+                action_type: 'Execution', 
+                detail: detail 
+            }
+        ]);
     }
 
     function renderTools() {
@@ -103,7 +119,6 @@
                 <h3 class="text-[11px] font-black uppercase italic">${t.title}</h3>
             </div>
         `).join('');
-        // RENDER ICON SETELAH GRID DIBUAT
         lucide.createIcons();
     }
 
@@ -117,29 +132,34 @@
             </div>
             <input type="text" id="tool-input" placeholder="Paste link..." class="w-full premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs text-white mb-4">
             <div id="tool-result" class="hidden result-box p-4 rounded-2xl text-center mb-4"></div>
-            <button id="btn-exec" onclick="processTool('${id}')" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Execute</button>
+            <button id="btn-exec" onclick="processTool('${id}', '${tool.title}')" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Execute</button>
         `;
         lucide.createIcons();
     }
 
-    async function processTool(id) {
+    async function processTool(id, title) {
         const val = document.getElementById('tool-input').value;
         const resDiv = document.getElementById('tool-result');
         if(!val) return alert("Link mana, Master?");
 
         resDiv.classList.remove('hidden');
-        resDiv.innerHTML = '<p class="animate-pulse">Accessing Nexus Cloud...</p>';
+        resDiv.innerHTML = '<p class="animate-pulse text-purple-400">Processing Cloud...</p>';
 
-        if(id === 'tt') {
-            try {
+        try {
+            if(id === 'tt') {
                 const { data, error } = await supabase.functions.invoke('quick-action', { body: { url: val } });
                 if(error) throw error;
                 const video = data?.play || data?.data?.play;
-                resDiv.innerHTML = `<video src="${video}" controls class="w-full rounded-lg mb-2"></video>
-                                    <a href="${video}" target="_blank" class="block bg-green-500 p-2 rounded-lg text-black font-bold text-[10px]">DOWNLOAD HD</a>`;
-            } catch(e) { resDiv.innerHTML = '<p class="text-red-500 text-[10px]">Error: ' + e.message + '</p>'; }
-        } else {
-            resDiv.innerHTML = 'Fitur ini dalam pengembangan.';
+                resDiv.innerHTML = `
+                    <video src="${video}" controls class="w-full rounded-lg mb-2"></video>
+                    <a href="${video}" target="_blank" class="block bg-green-500 p-2 rounded-lg text-black font-bold text-[10px]">DOWNLOAD HD</a>
+                `;
+                saveHistory(title, val.substring(0, 30));
+            } else {
+                resDiv.innerHTML = 'Module sedang dikembangkan, Tuan.';
+            }
+        } catch(e) {
+            resDiv.innerHTML = `<p class="text-red-500 text-[10px]">Error: ${e.message}</p>`;
         }
     }
 
