@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEXUS ULTIMATE V7</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
@@ -18,8 +18,6 @@
         .hide-scroll::-webkit-scrollbar { display: none; }
         .cat-active { background: var(--primary) !important; color: white !important; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4); }
         .nexus-gradient { background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%); }
-        .history-card { border-left: 4px solid var(--primary); }
-        #chat-container { display: flex; flex-direction: column; height: calc(100vh - 280px); }
         .result-box { background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(168, 85, 247, 0.3); }
     </style>
 </head>
@@ -32,7 +30,7 @@
             </div>
             <div>
                 <h1 class="text-xl font-[800] italic tracking-tighter leading-none">NEXUS<span class="text-purple-500">V7</span></h1>
-                <p id="system-status" class="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">Status: Loading...</p>
+                <p id="system-status" class="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">Status: Offline</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -47,42 +45,16 @@
         <button onclick="filterTools('All')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap cat-active">All</button>
         <button onclick="filterTools('Media')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap">Medsos</button>
         <button onclick="filterTools('AI')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap">AI Brain</button>
-        <button onclick="filterTools('Files')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap">Files</button>
-        <button onclick="filterTools('Dev')" class="cat-btn px-6 py-2.5 rounded-full premium-glass text-[10px] font-black uppercase whitespace-nowrap">Dev Only</button>
     </div>
 
     <main class="px-6" id="main-content">
         <div id="user-grid" class="grid grid-cols-2 gap-4"></div>
-        <div id="dev-grid" class="hidden grid grid-cols-2 gap-3"></div>
-        
-        <div id="history-view" class="hidden">
-            <div class="flex justify-between items-end mb-6">
-                <h2 class="text-2xl font-black italic uppercase">History Log</h2>
-            </div>
-            <div id="history-list" class="space-y-4"></div>
-        </div>
-
         <div id="ai-view" class="hidden">
-            <div id="chat-container" class="premium-glass rounded-[2.5rem] p-6 flex flex-col">
-                <div id="chat-messages" class="flex-1 overflow-y-auto space-y-4 pr-2 hide-scroll"></div>
-                <div class="mt-4 flex gap-2">
-                    <input id="chat-input" type="text" placeholder="Tanya Nexus..." class="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl outline-none text-xs">
-                    <button onclick="sendMessage()" class="w-12 h-12 nexus-gradient rounded-2xl flex items-center justify-center"><i data-lucide="send" size="18"></i></button>
-                </div>
             </div>
-        </div>
-
-        <div id="settings-view" class="hidden">
-            <div id="settings-grid" class="grid grid-cols-2 gap-4"></div>
-        </div>
     </main>
 
     <nav class="fixed bottom-6 left-6 right-6 h-20 premium-glass rounded-[2.5rem] flex justify-around items-center z-[200] border-white/10">
         <button onclick="switchTab('home')" id="nav-home" class="p-3 active-nav"><i data-lucide="layout-grid"></i></button>
-        <button onclick="switchTab('history')" id="nav-history" class="p-3 text-gray-600"><i data-lucide="calendar-days"></i></button>
-        <div onclick="openDevAuth()" class="w-16 h-16 nexus-gradient rounded-full flex items-center justify-center -mt-10 border-4 border-black shadow-xl shadow-purple-600/30">
-            <i data-lucide="shield-check" class="text-white"></i>
-        </div>
         <button onclick="switchTab('ai')" id="nav-ai" class="p-3 text-gray-600"><i data-lucide="bot"></i></button>
         <button onclick="switchTab('settings')" id="nav-settings" class="p-3 text-gray-600"><i data-lucide="settings"></i></button>
     </nav>
@@ -95,21 +67,11 @@
         </div>
     </div>
 
-    <div id="dev-auth" class="fixed inset-0 z-[400] hidden flex items-center justify-center bg-black/90 backdrop-blur-3xl p-10">
-        <div class="premium-glass p-8 rounded-[3rem] w-full max-w-sm text-center">
-            <h2 class="text-2xl font-black italic mb-6">DEV AUTHORIZATION</h2>
-            <input type="password" id="dev-pin" placeholder="••••••" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl text-center text-4xl font-mono tracking-[10px] outline-none mb-6">
-            <button onclick="verifyDev()" class="w-full nexus-gradient py-4 rounded-2xl font-black uppercase italic shadow-lg">Login System</button>
-            <button onclick="closeDevAuth()" class="mt-4 text-gray-500 font-bold uppercase text-[10px]">Batal</button>
-        </div>
-    </div>
-
     <script>
     const SUPABASE_URL = 'https://iddixsqqpjbyswsadjwv.supabase.co'; 
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkZGl4c3FxcGpieXN3c2Fkand2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTUwNTYsImV4cCI6MjA4ODczMTA1Nn0.rXWDEi26WWE1VJQ2dwjpBXhK4YqRCgVC-HfxLkcdDbA';
     
-    let supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const APIS = { pin: '144927' };
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     const USER_TOOLS = [
         { id: 'tt', cat: 'Media', title: 'TikTok DL', icon: 'video', color: '#ff0050', desc: 'Download HD Video' },
@@ -119,139 +81,77 @@
         { id: 'pass', cat: 'Files', title: 'Password', icon: 'key', color: '#fb7185', desc: 'Secure Generator' }
     ];
 
-    let state = { history: [], chat: [], isDev: false, user: null };
-
-    // FUNGSI PAKSA ICON (PENTING!)
-    function refreshIcons() {
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        } else {
-            // Jika lucide belum siap, tunggu 300ms lalu coba lagi
-            setTimeout(refreshIcons, 300);
-        }
-    }
-
     async function initSupabase() {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                state.user = session.user;
-            } else {
-                const { data } = await supabase.auth.signInAnonymously();
-                state.user = data?.user;
-            }
+            if (!session) await supabase.auth.signInAnonymously();
+            
             document.getElementById('system-status').innerText = 'Status: Synced';
             document.getElementById('system-status').style.color = '#22c55e';
         } catch(e) {
-            document.getElementById('system-status').innerText = 'Status: Offline';
+            document.getElementById('system-status').innerText = 'Status: Local Mode';
         }
     }
 
-    function renderTools(mode = 'user') {
-        const grid = mode === 'user' ? document.getElementById('user-grid') : document.getElementById('dev-grid');
-        const data = mode === 'user' ? USER_TOOLS : []; 
-        grid.innerHTML = data.map(t => `
-            <div class="premium-glass p-6 rounded-[2.5rem] flex flex-col items-center text-center cursor-pointer" onclick="openTool('${t.id}', '${mode}')">
+    function renderTools() {
+        const grid = document.getElementById('user-grid');
+        grid.innerHTML = USER_TOOLS.map(t => `
+            <div class="premium-glass p-6 rounded-[2.5rem] flex flex-col items-center text-center cursor-pointer" onclick="openTool('${t.id}')">
                 <div class="w-16 h-16 rounded-3xl flex items-center justify-center mb-4" style="background: ${t.color}15; color: ${t.color}">
-                    <i data-lucide="${t.icon}" size="28"></i>
+                    <i data-lucide="${t.icon}"></i>
                 </div>
                 <h3 class="text-[11px] font-black uppercase italic">${t.title}</h3>
             </div>
         `).join('');
-        refreshIcons();
+        // RENDER ICON SETELAH GRID DIBUAT
+        lucide.createIcons();
     }
 
-    function openTool(id, mode) {
+    function openTool(id) {
         const tool = USER_TOOLS.find(x => x.id === id);
-        if(!tool) return;
         document.getElementById('modal').classList.remove('hidden');
-        let ui = `<div class="space-y-4">
-            <input type="text" id="tool-input" placeholder="Paste Link / Input..." class="w-full premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs font-bold text-white">
-            <div id="tool-result" class="hidden result-box p-4 rounded-2xl text-center overflow-hidden"></div>
-            <button id="exec-btn" onclick="processTool('${tool.id}', '${tool.title}')" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Execute</button>
-        </div>`;
-
         document.getElementById('modal-content').innerHTML = `
             <div class="flex items-center gap-5 mb-8">
-                <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: ${tool.color}20; color: ${tool.color}"><i data-lucide="${tool.icon}" size="32"></i></div>
-                <div><h2 class="text-2xl font-black italic uppercase">${tool.title}</h2></div>
-            </div>${ui}`;
-        refreshIcons();
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background: ${tool.color}20; color: ${tool.color}"><i data-lucide="${tool.icon}"></i></div>
+                <h2 class="text-2xl font-black italic uppercase">${tool.title}</h2>
+            </div>
+            <input type="text" id="tool-input" placeholder="Paste link..." class="w-full premium-glass p-4 rounded-2xl bg-transparent outline-none text-xs text-white mb-4">
+            <div id="tool-result" class="hidden result-box p-4 rounded-2xl text-center mb-4"></div>
+            <button id="btn-exec" onclick="processTool('${id}')" class="w-full nexus-gradient py-4 rounded-xl font-black uppercase">Execute</button>
+        `;
+        lucide.createIcons();
     }
 
-    async function processTool(id, title) {
+    async function processTool(id) {
         const val = document.getElementById('tool-input').value;
         const resDiv = document.getElementById('tool-result');
-        const btn = document.getElementById('exec-btn');
-        
-        if(!val) return alert("Isi dulu, Tuan!");
-        
+        if(!val) return alert("Link mana, Master?");
+
         resDiv.classList.remove('hidden');
-        resDiv.innerHTML = '<p class="text-xs animate-pulse">Processing System...</p>';
-        btn.disabled = true;
+        resDiv.innerHTML = '<p class="animate-pulse">Accessing Nexus Cloud...</p>';
 
-        if (id === 'tt') {
+        if(id === 'tt') {
             try {
-                // PANGGIL EDGE FUNCTION LU
-                const { data, error } = await supabase.functions.invoke('quick-action', { 
-                    body: { url: val } 
-                });
-                
+                const { data, error } = await supabase.functions.invoke('quick-action', { body: { url: val } });
                 if(error) throw error;
-
                 const video = data?.play || data?.data?.play;
-                if(video) {
-                    resDiv.innerHTML = `
-                        <video src="${video}" controls class="w-full rounded-lg mb-4"></video>
-                        <a href="${video}" target="_blank" class="block w-full bg-green-500 p-3 rounded-lg text-[10px] font-black text-black uppercase">Save Video HD</a>
-                    `;
-                } else { 
-                    resDiv.innerHTML = '<p class="text-red-400 text-xs">Gagal: Video tidak ditemukan atau link salah.</p>'; 
-                }
-            } catch(e) { 
-                resDiv.innerHTML = '<p class="text-red-400 text-xs">Error: ' + e.message + '</p>'; 
-            }
+                resDiv.innerHTML = `<video src="${video}" controls class="w-full rounded-lg mb-2"></video>
+                                    <a href="${video}" target="_blank" class="block bg-green-500 p-2 rounded-lg text-black font-bold text-[10px]">DOWNLOAD HD</a>`;
+            } catch(e) { resDiv.innerHTML = '<p class="text-red-500 text-[10px]">Error: ' + e.message + '</p>'; }
         } else {
-            resDiv.innerHTML = '<p class="text-purple-400 text-xs">Module ' + title + ' active!</p>';
+            resDiv.innerHTML = 'Fitur ini dalam pengembangan.';
         }
-        btn.disabled = false;
-    }
-
-    function switchTab(tab) {
-        ['user-grid', 'history-view', 'ai-view', 'settings-view'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.classList.add('hidden');
-        });
-        
-        const target = tab === 'home' ? 'user-grid' : tab + '-view';
-        const targetEl = document.getElementById(target);
-        if(targetEl) targetEl.classList.remove('hidden');
-        
-        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
-        document.getElementById('nav-' + (tab === 'home' ? 'home' : tab)).classList.add('active-nav');
-        refreshIcons();
     }
 
     function closeModal() { document.getElementById('modal').classList.add('hidden'); }
-    function openDevAuth() { document.getElementById('dev-auth').classList.remove('hidden'); }
-    function closeDevAuth() { document.getElementById('dev-auth').classList.add('hidden'); }
 
-    // THE FINAL ONLOAD
     window.onload = () => {
-        renderTools('user');
-        
-        // Jam
-        setInterval(() => { 
-            const n = new Date(); 
-            const clock = document.getElementById('clock');
-            if(clock) clock.innerText = n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0'); 
-        }, 1000);
-
-        // Init DB & Sync
+        renderTools();
         initSupabase();
-        
-        // Paksa refresh icon sekali lagi setelah 1 detik buat jaga-jaga
-        setTimeout(refreshIcons, 1000);
+        setInterval(() => {
+            const n = new Date();
+            document.getElementById('clock').innerText = n.getHours().toString().padStart(2, '0') + ':' + n.getMinutes().toString().padStart(2, '0');
+        }, 1000);
     };
     </script>
 </body>
